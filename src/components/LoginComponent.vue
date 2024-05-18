@@ -13,10 +13,10 @@
               <v-card-text>
                 <v-form>
                   <v-text-field
-                    label="Usuario"
+                    label="Email"
                     type="text"
                     color="blue"
-                    v-model="login.usuario"
+                    v-model="login.email"
                   />
                   <v-text-field
                     label="Senha"
@@ -37,7 +37,8 @@
                   </span>
                 </v-card-text>
                 <v-spacer />
-                <v-btn color="blue" dark>Entrar</v-btn>
+                <v-btn color="blue" dark @click="loginUser">Entrar</v-btn>
+                <p v-if="loginError">{{ loginError }}</p>
               </v-card-actions>
             </v-card>
           </v-col>
@@ -49,17 +50,36 @@
 
 <script>
 
-import { db } from "../firebaseDB.js"
+import { auth } from "../firebaseDB.js"
 
 export default {
   data() {
     return {
       login:{
-        usuario: '',
+        email: '',
         senha: '',
       },
-      
+      loginError: null,
     };
+  },
+  methods: {
+    loginUser() {
+
+    const email = this.login.email;
+    const password = this.login.password;
+
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then((userCredential) => {
+        console.log('User logged in:', userCredential);
+        this.$router.push('/'); 
+      })
+      .catch((error) => {
+
+        console.error('Login error:', error);
+        this.loginError = error.message; 
+      });
+    },
   },
 };
 </script>

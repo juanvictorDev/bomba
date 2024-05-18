@@ -13,12 +13,6 @@
               <v-card-text>
                 <v-form>
                   <v-text-field
-                    label="Usuario"
-                    type="text"
-                    color="blue"
-                    v-model="novaConta.usuario"
-                  />
-                  <v-text-field
                     label="Email"
                     type="text"
                     color="blue"
@@ -45,31 +39,29 @@
 
 <script>
 
-  import { db } from "../firebaseDB.js"
+  import {auth} from '../firebaseDB.js'
+
 
   export default {
     data() {
       return {
         novaConta:{
-          usuario: '',
           email: '',
           senha: ''
         }
       };
     },
     methods: {
-      criarUsuario(){
-        db.collection('usuarios').add(this.novaConta).then((docRef) => {
-          console.log("Document written with ID:", docRef.id);
-          
-        })
-        .catch((error) => {
-          console.error("Error adding document:", error);
-        });
-        
-        this.novaConta = { usuario: '', email: '', senha: ''}
-        this.$router.push('/login');
+      async criarUsuario() {
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(this.novaConta.email, this.novaConta.senha);
+          console.log('User created:', userCredential.user);
+          this.$router.push('/login'); 
+          this.novaConta = { email: '', senha: '' }; 
+      } catch (error) {
+        console.error('Registration error:', error);
       }
+    },
     }
   };
 </script>
