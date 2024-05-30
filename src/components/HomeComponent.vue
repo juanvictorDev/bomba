@@ -1,14 +1,14 @@
 <template>
-  <v-app >
+  <v-app>
     <HeaderComponent/>
     
     <v-main>
-      
       <div style="display: flex; justify-content: center;">
-        <v-btn elevation="3" x-largue style="margin: 20px; "  @click="abrirFormulario">Adicionar Curso</v-btn> 
+        <v-btn elevation="3" x-largue style="margin: 20px;" @click="abrirFormulario">Adicionar Curso</v-btn> 
       </div>
 
-      <v-dialog v-model="dialog" persistent  width="600">
+      <!-- DIALOG NOVO CURSO -->
+      <v-dialog v-model="dialog" persistent width="600">
         <v-card>
           <v-card-title>Adicionar Novo Curso</v-card-title>
           <v-card-text>
@@ -30,13 +30,9 @@
         </v-card>
       </v-dialog>
       
-
-
-      <v-expansion-panels focusable style="max-width: 800px; margin: 0 auto;" >
-        <v-expansion-panel
-          v-for= "curso in cursos"
-          :key="curso.id"
-        >
+      <!-- LISTA CURSOS -->
+      <v-expansion-panels focusable style="max-width: 800px; margin: 0 auto;">
+        <v-expansion-panel v-for="curso in cursos" :key="curso.id">
           <v-expansion-panel-header>
             <h3>{{ curso.nome }}
               <v-icon v-if="curso.tipoCurso === 'premium'" color="amber accent-3" class="star">mdi-star</v-icon>
@@ -51,18 +47,15 @@
               Excluir
               <v-icon right>mdi-trash-can-outline</v-icon>
             </v-btn>
-          
             <v-btn color="warning" elevation="0" @click="abrirEdicaoCurso(curso)">
               Editar  
               <v-icon right>mdi-pencil</v-icon>
             </v-btn>
-            
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
 
-
-
+      <!-- DIALOG EDICAO -->
       <v-dialog v-model="dialogEdicao" persistent width="600">
         <v-card>
           <v-card-title>Editar Curso</v-card-title>
@@ -84,36 +77,34 @@
           </v-card-actions>
         </v-card>
       </v-dialog>
-    
-  </v-main>
-  <br>
-  <br>
-  <FooterComponent/>
+    </v-main>
+    <br>
+    <br>
+    <FooterComponent/>
   </v-app>
 </template>
-
 
 <script>
   import FooterComponent from './FooterComponent.vue'
   import HeaderComponent from './HeaderComponent.vue'
-  import { db } from "../firebaseDB.js"
-  
+  import api from '../axiosConfig.js'
+
   export default {
-    components:{
+    components: {
       FooterComponent,
       HeaderComponent
     },
     data: () => ({
       dialog: false,
       dialogEdicao: false,
-      cursos:[ ],
+      cursos: [],
       novoCurso: {
-        id:0,
+        id: 0,
         nome: '',
         descricao: '',
         duracao: '',
         tipoCurso: "padrao",
-        preco:''
+        preco: ''
       },
       cursoEdicao: {
         id: 0,
@@ -121,44 +112,37 @@
         descricao: '',
         duracao: '',
         tipoCurso: "padrao",
-        preco:''
-      },
-      
+        preco: ''
+      }
     }),
-    methods:{
+    methods: {
       abrirFormulario() {
         this.dialog = true;
-        this.novoCurso = { nome: '', descricao: '', duracao: '', tipoCurso: "padrao", preco: ''}; 
+        this.novoCurso = { nome: '', descricao: '', duracao: '', tipoCurso: "padrao", preco: '' }; 
       },
 
       cancelar() {
         this.dialog = false;
       },
 
-      criar() {
-        this.dialog = false
-        
-        db.collection('cursos').add(this.novoCurso).then((docRef) => {
-          console.log("Document written with ID:", docRef.id);
-          this.$router.go();
-        })
-        .catch((error) => {
-          console.error("Error adding document:", error);
-        });
-        
-        this.novoCurso = { nome: '', descricao: '', duracao: '', tipoCurso: "padrao", preco: ''}
-
-      
+      async criar() {
+        this.dialog = false;
+        try {
+          await api.post('/cursos', this.novoCurso);
+          this.fetchCursos();
+        } catch (error) {
+          console.error("Erro ao adicionar curso:", error);
+        }
+        this.novoCurso = { nome: '', descricao: '', duracao: '', tipoCurso: "padrao", preco: '' };
       },
-      excluirCurso(curso) {
-        db.collection('cursos').doc(curso.id).delete()
-        .then(() => {
-          console.log("Course deleted successfully!");
-          this.$router.go();
-        })
-        .catch((error) => {
-          console.error("Error removing course:", error);
-        });
+
+      async excluirCurso(curso) {
+        try {
+          await api.delete('/cursos', { data: { id: curso.id } });
+          this.fetchCursos();
+        } catch (error) {
+          console.error("Erro ao excluir curso:", error);
+        }
       },
 
       abrirEdicaoCurso(curso) {
@@ -170,37 +154,34 @@
         this.dialogEdicao = false;
       },
 
-      salvarEdicao() {
-        db.collection('cursos').doc(this.cursoEdicao.id).update(this.cursoEdicao).then(() => {
-          console.log("Course updated successfully!");
-          this.$router.go(); 
-        })
-        .catch((error) => {
-          console.error("Error updating course:", error);
-        });
+      async salvarEdicao() {
+        try {
+          await api.put('/cursos', this.cursoEdicao);
+          this.fetchCursos();
+        } catch (error) {
+          console.error("Erro ao atualizar curso:", error);
+        }
+        this.dialogEdicao = false;
+      },
+
+      async fetchCursos() {
+        try {
+          const response = await api.get('/cursos');
+          this.cursos = response.data;
+        } catch (error) {
+          console.error("Erro ao buscar cursos:", error);
+        }
       }
     },
 
     created() {
-      db.collection('cursos').get().then((querySnapshot) => {
-        const data = [];
-        querySnapshot.forEach((doc) => {
-          let object = doc.data();
-          object.id = doc.id;
-          data.push(object);
-        });
-        this.cursos = data;
-      })
-      .catch((error) => {
-        console.error("Error fetching courses:", error);
-      });
-    },
+      this.fetchCursos();
+    }
   }
 </script>
 
 <style>
-  .star{
+  .star {
     margin-bottom: 4px;
   }
-
 </style>
